@@ -17,6 +17,7 @@
     },
     "dependencies": {
         "botbuilder": "~4.22.1",
+        "botbuilder-ai": "^4.17.0-blobs1",
         "dotenv": "~8.2.0",
         "restify": "~11.1.0"
     },

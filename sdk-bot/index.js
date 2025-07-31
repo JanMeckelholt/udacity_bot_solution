@@ -16,7 +16,7 @@ const {
 } = require('botbuilder');
 
 // This bot's main dialog.
-const { EchoBot } = require('./bot');
+const { EchoBot, QnABot } = require('./bot');
 
 // Create HTTP server
 const server = restify.createServer();
@@ -67,10 +67,24 @@ adapter.onTurnError = onTurnErrorHandler;
 // Create the main dialog.
 const myBot = new EchoBot();
 
+const QnAConfiguration = {
+    knowledgeBaseId: process.env.QnAKnowledgebaseId,
+    endpointKey: process.env.QnAAuthKey,
+    host: process.env.QnAEndpointHostName
+};
+// Pass into configuration object
+const configuration = {
+    QnAConfiguration
+}
+// Pass the configuration to the EchoBot
+const qnaBot = new QnABot(configuration);
+
+
+
 // Listen for incoming requests.
 server.post('/api/messages', async (req, res) => {
     // Route received a request to adapter for processing
-    await adapter.process(req, res, (context) => myBot.run(context));
+    await adapter.process(req, res, (context) => qnaBot.run(context));
 });
 
 server.get('/*', restify.plugins.serveStatic({
