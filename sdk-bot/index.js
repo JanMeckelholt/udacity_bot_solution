@@ -74,7 +74,7 @@ server.post('/api/messages', async (req, res) => {
 });
 
 server.get('/*', restify.plugins.serveStatic({
-    directory: path.join(__dirname, '../website'),
+    directory: path.join(__dirname, './website'),
     default: 'index.html'
 }));
 
