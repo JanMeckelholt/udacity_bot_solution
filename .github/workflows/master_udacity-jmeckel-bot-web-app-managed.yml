@@ -60,7 +60,7 @@ jobs:
           name: website
 
       - name: List workspace files
-        run: ls -R | grep -v 'node_modules'
+        run: find . -path './node_modules' -prune -o -print
 
       - name: Login to Azure
         uses: azure/login@v2
