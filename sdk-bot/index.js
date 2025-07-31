@@ -73,10 +73,10 @@ server.post('/api/messages', async (req, res) => {
     await adapter.process(req, res, (context) => myBot.run(context));
 });
 
-server.get('/', async (req, res) => {
-    res.send('Welcome to the Echo Bot! Send a message to /api/messages to interact with the bot.');
-    return next();
-})
+server.get('/*', restify.plugins.serveStatic({
+    directory: path.join(__dirname, '../website'),
+    default: 'index.html'
+}));
 
 // Listen for Upgrade requests for Streaming.
 server.on('upgrade', async (req, socket, head) => {
