@@ -58,4 +58,4 @@ jobs:
         with:
           app-name: 'udacity-jmeckel-bot-web-app-managed'
           slot-name: 'Production'
-          package: sdk-bot  # Deploy the sdk-bot folder
+          package: .
