@@ -46,6 +46,8 @@ jobs:
       contents: read #This is required for actions/checkout
 
     steps:
+      - name: Clean workspace
+        run: rm -rf ./*
       - name: Download artifact from build job
         uses: actions/download-artifact@v4
         with:
@@ -55,6 +57,8 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: website
+      - name: List workspace files
+        run: ls -R
 
       - name: Login to Azure
         uses: azure/login@v2
