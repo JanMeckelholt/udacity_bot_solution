@@ -130,7 +130,6 @@ class OrchestrationBot extends ActivityHandler {
             const question = context.activity.text;
             try {
                 const response = await queryOrchestration(configuration, options, question);
-                await context.sendActivity(`res: ${ JSON.stringify(response, null, 2) }`);
                 const answer = extractTopAnswer(response);
                 await context.sendActivity(answer);
             } catch (err) {
@@ -229,9 +228,12 @@ function extractTopAnswer(orchestrationResponse) {
     if (topIntent === 'udacity-jmeckel-appointment-time') {
         const prediction = intents[topIntent].result?.prediction;
         const timeIntent = prediction?.topIntent;
+        if (!timeIntent) return 'No answer found.';
         const entities = prediction?.entities;
-        const extractedTime = entities && entities[0]?.resolutions && entities[0].resolutions[0]?.value;
-        return timeIntent && extractedTime ? `${ timeIntent }#${ extractedTime }` : 'No answer found.';
+        if (!entities?.[0]?.resolutions?.[0]?.value) return 'No answer found.';
+        const extractedTime = entities[0].resolutions[0]?.value;
+        if (timeIntent === 'getAvailability-Intent') return `${ extractedTime } is available.`;
+        if (timeIntent === 'scheduleAppointment-Intent') return `Appointment for ${ extractedTime } is confirmed!`;
     }
 
     return 'No answer found.';
