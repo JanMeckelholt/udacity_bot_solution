@@ -1,7 +1,6 @@
 const { ActivityHandler, MessageFactory } = require('botbuilder');
 const { ConversationAnalysisClient, AzureKeyCredential } = require('@azure/ai-language-conversations');
 const https = require('https');
-const { stringify } = require('nodemon/lib/utils');
 
 class EchoBot extends ActivityHandler {
     constructor() {
@@ -44,10 +43,7 @@ class QnABot extends ActivityHandler {
         this.onMessage(async (context, next) => {
             const question = context.activity.text;
             try {
-                // const answer = await queryQnA(configuration, qnaOptions, question);
-                const res = await queryOrchestration(configuration, options, question);
-                context.sendActivity(`res: ${ JSON.stringify(res, null, 2) }`);
-                const answer = extractTopAnswer(res);
+                const answer = await queryQnA(configuration, options, question);
                 await context.sendActivity(answer);
             } catch (err) {
                 await context.sendActivity(`Error querying QnA service. with question: ${ question }`);
@@ -133,8 +129,8 @@ class OrchestrationBot extends ActivityHandler {
         this.onMessage(async (context, next) => {
             const question = context.activity.text;
             try {
-                const response = await queryOrchestration(configuration, qnaOptions, question);
-                await context.sendActivity(stringify(response, null, 2));
+                const response = await queryOrchestration(configuration, options, question);
+                await context.sendActivity(`res: ${ JSON.stringify(response, null, 2) }`);
                 const answer = extractTopAnswer(response);
                 await context.sendActivity(answer);
             } catch (err) {
