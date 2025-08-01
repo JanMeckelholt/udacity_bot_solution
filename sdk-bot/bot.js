@@ -29,6 +29,8 @@ class EchoBot extends ActivityHandler {
 class QnABot extends ActivityHandler {
     constructor(configuration, qnaOptions) {
         super();
+        if (!configuration) throw new Error('[QnaMakerBot]: Missing parameter. configuration is required');
+        // create a QnAMaker connector
         this.qnaMaker = new QnAMaker(configuration.QnAConfiguration, qnaOptions);
         this.onMessage(async (context, next) => {
             // Send user input to QnA Maker
