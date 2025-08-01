@@ -43,7 +43,9 @@ class QnABot extends ActivityHandler {
         this.onMessage(async (context, next) => {
             const question = context.activity.text;
             try {
-                const answer = await queryQnA(configuration, qnaOptions, question);
+                // const answer = await queryQnA(configuration, qnaOptions, question);
+                const res = await queryOrchestration(configuration, qnaOptions, question);
+                const answer = extractTopAnswer(res);
                 await context.sendActivity(answer);
             } catch (err) {
                 await context.sendActivity(`Error querying QnA service. with question: ${ question }`);
@@ -93,14 +95,7 @@ async function queryQnA(configuration, qnaOptions, question) {
                     try {
                         const result = JSON.parse(data);
                         console.log('Full result:', JSON.stringify(result, null, 2)); // Log the full result
-
-                        if (result && result.answers && result.answers.length > 0) {
-                            console.log('Answer:', result.answers[0].answer);
-                            resolve(result.answers[0].answer);
-                        } else {
-                            console.log('No answer found.');
-                            resolve('No answer found.');
-                        }
+                        resolve(result);
                     } catch (parseError) {
                         console.error('Error parsing JSON:', parseError);
                         reject(`Error parsing JSON: ${ parseError.message }`);
@@ -126,6 +121,89 @@ async function queryQnA(configuration, qnaOptions, question) {
             reject(`Error setting up request: ${ error.message }`);
         }
     });
+}
+
+async function queryOrchestration(configuration, orchestrationOptions, inputText) {
+    return new Promise((resolve, reject) => {
+        try {
+            const path = '/language/:analyze-conversations?api-version=2024-11-15-preview';
+            const options = {
+                hostname: configuration.OrchestrationEndpointHostName.replace(/^https:\/\//, ''),
+                path: path,
+                method: 'POST',
+                headers: {
+                    'Ocp-Apim-Subscription-Key': configuration.OrchestrationAuthKey,
+                    'Apim-Request-Id': orchestrationOptions.requestId || 'default-request-id',
+                    'Content-Type': 'application/json'
+                }
+            };
+
+            const req = https.request(options, (res) => {
+                let data = '';
+                res.on('data', (chunk) => {
+                    data += chunk;
+                });
+                res.on('end', () => {
+                    try {
+                        const result = JSON.parse(data);
+                        resolve(result);
+                    } catch (parseError) {
+                        reject(new Error(`Error parsing JSON: ${ parseError.message }`));
+                    }
+                });
+            });
+
+            req.on('error', (error) => {
+                reject(new Error(`Error querying Orchestration service: ${ error.message }`));
+            });
+
+            const postData = JSON.stringify({
+                kind: 'Conversation',
+                analysisInput: {
+                    conversationItem: {
+                        id: orchestrationOptions.conversationId || '1',
+                        text: inputText,
+                        modality: 'text',
+                        language: orchestrationOptions.language || 'en',
+                        participantId: orchestrationOptions.participantId || '1'
+                    }
+                },
+                parameters: {
+                    projectName: orchestrationOptions.projectName,
+                    verbose: true,
+                    deploymentName: orchestrationOptions.deploymentName,
+                    stringIndexType: 'TextElement_V8'
+                }
+            });
+
+            req.write(postData);
+            req.end();
+        } catch (error) {
+            reject(new Error(`Error setting up request: ${ error.message }`));
+        }
+    });
+}
+
+function extractTopAnswer(orchestrationResponse) {
+    const intents = orchestrationResponse?.result?.prediction?.intents;
+    if (!intents) return 'No answer found.';
+
+    const topIntent = orchestrationResponse?.result?.prediction?.topIntent;
+
+    if (topIntent === 'udacity-jmeckel-dentist-chat-intent') {
+        const answers = intents[topIntent].result?.answers;
+        return answers && answers[0]?.answer ? answers[0].answer : 'No answer found.';
+    }
+
+    if (topIntent === 'udacity-jmeckel-appointment-time') {
+        const prediction = intents[topIntent].result?.prediction;
+        const timeIntent = prediction?.topIntent;
+        const entities = prediction?.entities;
+        const extractedTime = entities && entities[0]?.resolutions && entities[0].resolutions[0]?.value;
+        return timeIntent && extractedTime ? `${ timeIntent }#${ extractedTime }` : 'No answer found.';
+    }
+
+    return 'No answer found.';
 }
 
 module.exports.EchoBot = EchoBot;
