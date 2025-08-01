@@ -1,5 +1,6 @@
 const { ActivityHandler, MessageFactory } = require('botbuilder');
 const { ConversationAnalysisClient, AzureKeyCredential } = require('@azure/ai-language-conversations');
+const https = require('https');
 
 class EchoBot extends ActivityHandler {
     constructor() {
@@ -42,26 +43,8 @@ class QnABot extends ActivityHandler {
         this.onMessage(async (context, next) => {
             const question = context.activity.text;
             try {
-                const result = await this.qnaClient.analyzeConversation({
-                    kind: 'QuestionAnswering',
-                    analysisInput: {
-                        conversationItem: {
-                            text: question,
-                            id: context.activity.id,
-                            participantId: context.activity.from.id
-                        }
-                    },
-                    parameters: {
-                        projectName: this.projectName,
-                        deploymentName: this.deploymentName
-                    }
-                });
-                const answers = result.result && result.result.answers ? result.result.answers : [];
-                if (answers && answers.length > 0 && answers[0].answer) {
-                    await context.sendActivity(answers[0].answer);
-                } else {
-                    await context.sendActivity('I\'m not sure I found an answer to your question');
-                }
+                const answer = await queryQnA(configuration, qnaOptions, question);
+                await context.sendActivity(answer);
             } catch (err) {
                 await context.sendActivity(`Error querying QnA service. with question: ${ question }`);
                 await context.sendActivity(`err: ${ err } `);
@@ -83,6 +66,66 @@ class QnABot extends ActivityHandler {
             await next();
         });
     }
+}
+
+async function queryQnA(configuration, qnaOptions, question) {
+    return new Promise((resolve, reject) => {
+        try {
+            const path = `/language/:query-knowledgebases?projectName=${ configuration.QnAProjectName }&api-version=2021-10-01&deploymentName=${ qnaOptions.deploymentName || 'production' }`;
+            const options = {
+                hostname: configuration.QnAEndpointHostName.replace(/^https:\/\//, ''), // Remove https:// from endpoint
+                path: path,
+                method: 'POST',
+                headers: {
+                    'Ocp-Apim-Subscription-Key': configuration.QnAAuthKey,
+                    'Content-Type': 'application/json'
+                }
+            };
+
+            const req = https.request(options, (res) => {
+                let data = '';
+
+                res.on('data', (chunk) => {
+                    data += chunk;
+                });
+
+                res.on('end', () => {
+                    try {
+                        const result = JSON.parse(data);
+                        console.log('Full result:', JSON.stringify(result, null, 2)); // Log the full result
+
+                        if (result && result.answers && result.answers.length > 0) {
+                            console.log('Answer:', result.answers[0].answer);
+                            resolve(result.answers[0].answer);
+                        } else {
+                            console.log('No answer found.');
+                            resolve('No answer found.');
+                        }
+                    } catch (parseError) {
+                        console.error('Error parsing JSON:', parseError);
+                        reject(`Error parsing JSON: ${ parseError.message }`);
+                    }
+                });
+            });
+
+            req.on('error', (error) => {
+                console.error('Error querying QnA service:', error);
+                reject(`Error querying QnA service: ${ error.message }`);
+            });
+
+            const postData = JSON.stringify({
+                question: question,
+                top: 3,
+                includeUnstructuredSources: true
+            });
+
+            req.write(postData);
+            req.end();
+        } catch (error) {
+            console.error('Error setting up request:', error);
+            reject(`Error setting up request: ${ error.message }`);
+        }
+    });
 }
 
 module.exports.EchoBot = EchoBot;
