@@ -128,11 +128,11 @@ async function queryOrchestration(configuration, orchestrationOptions, inputText
         try {
             const path = '/language/:analyze-conversations?api-version=2024-11-15-preview';
             const options = {
-                hostname: configuration.OrchestrationEndpointHostName.replace(/^https:\/\//, ''),
+                hostname: configuration.QnAEndpointHostName.replace(/^https:\/\//, ''),
                 path: path,
                 method: 'POST',
                 headers: {
-                    'Ocp-Apim-Subscription-Key': configuration.OrchestrationAuthKey,
+                    'Ocp-Apim-Subscription-Key': configuration.QnAAuthKey,
                     'Apim-Request-Id': orchestrationOptions.requestId || 'default-request-id',
                     'Content-Type': 'application/json'
                 }
