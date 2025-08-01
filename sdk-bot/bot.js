@@ -47,8 +47,8 @@ class QnABot extends ActivityHandler {
                     analysisInput: {
                         conversationItem: {
                             text: question,
-                            id: '1',
-                            participantId: 'user'
+                            id: context.activity.id,
+                            participantId: context.activity.from.id
                         }
                     },
                     parameters: {
@@ -63,8 +63,9 @@ class QnABot extends ActivityHandler {
                     await context.sendActivity('I\'m not sure I found an answer to your question');
                 }
             } catch (err) {
-                await context.sendActivity('Error querying QnA service.');
-                await context.sendActivity(`err: ${ err }`);
+                await context.sendActivity(`Error querying QnA service. with question: ${ question }`);
+                await context.sendActivity(`err: ${ err } `);
+                await context.sendActivity(`QnAEndpointHostName: ${ configuration.QnAEndpointHostName } \n QnAAuthKey: ${ configuration.QnAAuthKey } \n QnAProjectName: ${ configuration.QnAProjectName } \n`);
                 console.error(err);
             }
             await next();
