@@ -1,12 +1,12 @@
-const {ActivityHandler, MessageFactory} = require('botbuilder');
-const { QnAMaker } = require('botbuilder-ai');
+const { ActivityHandler, MessageFactory } = require('botbuilder');
+const { ConversationAnalysisClient, AzureKeyCredential } = require('@azure/ai-language-conversations');
 
 class EchoBot extends ActivityHandler {
     constructor() {
         super();
         // See https://aka.ms/about-bot-activity-message to learn more about the message and other activity types.
         this.onMessage(async (context, next) => {
-            const replyText = `Echo: ${context.activity.text}`;
+            const replyText = `Echo: ${ context.activity.text }`;
             await context.sendActivity(MessageFactory.text(replyText, replyText));
             // By calling next() you ensure that the next BotHandler is run.
             await next();
@@ -29,22 +29,44 @@ class EchoBot extends ActivityHandler {
 class QnABot extends ActivityHandler {
     constructor(configuration, qnaOptions) {
         super();
-        if (!configuration) throw new Error('[QnaMakerBot]: Missing parameter. configuration is required');
-        // create a QnAMaker connector
-        this.qnaMaker = new QnAMaker(configuration.QnAConfiguration, qnaOptions);
+        if (!configuration) throw new Error('[QnABot]: Missing parameter. configuration is required');
+        this.qnaClient = new ConversationAnalysisClient(
+            configuration.QnAEndpointHostName,
+            new AzureKeyCredential(configuration.QnAAuthKey)
+        );
+        this.projectName = configuration.QnAKnowledgebaseId;
+        this.deploymentName = qnaOptions.deploymentName || 'production';
+
         this.onMessage(async (context, next) => {
-            // Send user input to QnA Maker
-            const qnaResults = await this.qnaMaker.getAnswers(context);
-            // If an answer was received from QnA Maker, send the answer back to the user.
-            if (qnaResults[0]) {
-                console.log(qnaResults[0])
-                await context.sendActivity(`${qnaResults[0].answer}`);
-            } else {
-                // If no answers were returned from QnA Maker, reply with help.
-                await context.sendActivity("I'm not sure I found an answer to your question");
+            const question = context.activity.text;
+            try {
+                const result = await this.qnaClient.analyzeConversation({
+                    kind: 'CustomQuestionAnswering',
+                    analysisInput: {
+                        conversationItem: {
+                            text: question,
+                            id: '1',
+                            participantId: 'user'
+                        }
+                    },
+                    parameters: {
+                        projectName: this.projectName,
+                        deploymentName: this.deploymentName
+                    }
+                });
+                const answers = result.result.answers;
+                if (answers && answers.length > 0 && answers[0].answer) {
+                    await context.sendActivity(answers[0].answer);
+                } else {
+                    await context.sendActivity('I\'m not sure I found an answer to your question');
+                }
+            } catch (err) {
+                await context.sendActivity('Error querying QnA service.');
+                console.error(err);
             }
             await next();
         });
+
         this.onMembersAdded(async (context, next) => {
             const membersAdded = context.activity.membersAdded;
             const welcomeText = 'Hello and welcome to QnABot!';
@@ -53,10 +75,8 @@ class QnABot extends ActivityHandler {
                     await context.sendActivity(MessageFactory.text(welcomeText, welcomeText));
                 }
             }
-            // By calling next() you ensure that the next BotHandler is run.
             await next();
         });
-
     }
 }
 

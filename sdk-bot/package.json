@@ -16,6 +16,7 @@
         "url": "https://github.com"
     },
     "dependencies": {
+        "@azure/ai-language-conversations": "^1.0.0-beta.1",
         "botbuilder": "~4.22.1",
         "botbuilder-ai": "^4.17.0-blobs1",
         "dotenv": "~8.2.0",

@@ -67,19 +67,12 @@ adapter.onTurnError = onTurnErrorHandler;
 // Create the main dialog.
 const myBot = new EchoBot();
 
-const QnAConfiguration = {
-    knowledgeBaseId: process.env.QnAKnowledgebaseId,
-    endpointKey: process.env.QnAAuthKey,
-    host: process.env.QnAEndpointHostName
-};
-// Pass into configuration object
 const configuration = {
-    QnAConfiguration
-}
-// Pass the configuration to the EchoBot
-const qnaBot = new QnABot(configuration);
-
-
+    QnAEndpointHostName: process.env.QnAEndpointHostName,
+    QnAAuthKey: process.env.QnAAuthKey,
+    QnAKnowledgebaseId: process.env.QnAKnowledgebaseId
+};
+const qnaBot = new QnABot(configuration, { deploymentName: 'production' });
 
 // Listen for incoming requests.
 server.post('/api/messages', async (req, res) => {
