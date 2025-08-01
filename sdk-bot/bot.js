@@ -43,14 +43,12 @@ class QnABot extends ActivityHandler {
             const question = context.activity.text;
             try {
                 const result = await this.qnaClient.analyzeConversation({
-                    kind: 'Conversation',
+                    kind: 'QuestionAnswering',
                     analysisInput: {
                         conversationItem: {
                             text: question,
-                            participantId: '1',
-                            id: '1',
-                            modality: 'text',
-                            language: 'en'
+                            id: context.activity.id,
+                            participantId: context.activity.from.id
                         }
                     },
                     parameters: {
