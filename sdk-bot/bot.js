@@ -66,6 +66,7 @@ class QnABot extends ActivityHandler {
                 await context.sendActivity(`Error querying QnA service. with question: ${ question }`);
                 await context.sendActivity(`err: ${ err } `);
                 await context.sendActivity(`QnAEndpointHostName: ${ configuration.QnAEndpointHostName } \n QnAAuthKey: ${ configuration.QnAAuthKey } \n QnAProjectName: ${ configuration.QnAProjectName } \n`);
+                await context.sendActivity(`qnaClient: ${ this.qnaClient } \n projectName: ${ this.projectName } \n deploymentName: ${ this.deploymentName } \n`);
                 console.error(err);
             }
             await next();
