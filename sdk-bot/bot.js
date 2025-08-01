@@ -1,6 +1,7 @@
 const { ActivityHandler, MessageFactory } = require('botbuilder');
 const { ConversationAnalysisClient, AzureKeyCredential } = require('@azure/ai-language-conversations');
 const https = require('https');
+const { stringify } = require('nodemon/lib/utils');
 
 class EchoBot extends ActivityHandler {
     constructor() {
@@ -28,7 +29,7 @@ class EchoBot extends ActivityHandler {
 }
 
 class QnABot extends ActivityHandler {
-    constructor(configuration, qnaOptions) {
+    constructor(configuration, options) {
         super();
         if (!configuration) throw new Error('[QnABot]: Missing parameter. configuration is required');
 
@@ -38,13 +39,13 @@ class QnABot extends ActivityHandler {
         this.qnaClient = new ConversationAnalysisClient(endpoint, credential);
 
         this.projectName = configuration.QnAProjectName;
-        this.deploymentName = qnaOptions.deploymentName || 'production';
+        this.deploymentName = options.deploymentName || 'production';
 
         this.onMessage(async (context, next) => {
             const question = context.activity.text;
             try {
                 // const answer = await queryQnA(configuration, qnaOptions, question);
-                const res = await queryOrchestration(configuration, qnaOptions, question);
+                const res = await queryOrchestration(configuration, options, question);
                 context.sendActivity(`res: ${ JSON.stringify(res, null, 2) }`);
                 const answer = extractTopAnswer(res);
                 await context.sendActivity(answer);
@@ -122,6 +123,39 @@ async function queryQnA(configuration, qnaOptions, question) {
             reject(`Error setting up request: ${ error.message }`);
         }
     });
+}
+
+class OrchestrationBot extends ActivityHandler {
+    constructor(configuration, options) {
+        super();
+        if (!configuration) throw new Error('[QnABot]: Missing parameter. configuration is required');
+
+        this.onMessage(async (context, next) => {
+            const question = context.activity.text;
+            try {
+                const response = await queryOrchestration(configuration, qnaOptions, question);
+                await context.sendActivity(stringify(response, null, 2));
+                const answer = extractTopAnswer(response);
+                await context.sendActivity(answer);
+            } catch (err) {
+                await context.sendActivity(`Error querying QnA service. with question: ${ question }`);
+                await context.sendActivity(`err: ${ err } `);
+                console.error(err);
+            }
+            await next();
+        });
+
+        this.onMembersAdded(async (context, next) => {
+            const membersAdded = context.activity.membersAdded;
+            const welcomeText = 'Hello and welcome to QnABot!';
+            for (let cnt = 0; cnt < membersAdded.length; ++cnt) {
+                if (membersAdded[cnt].id !== context.activity.recipient.id) {
+                    await context.sendActivity(MessageFactory.text(welcomeText, welcomeText));
+                }
+            }
+            await next();
+        });
+    }
 }
 
 async function queryOrchestration(configuration, orchestrationOptions, inputText) {
@@ -209,3 +243,4 @@ function extractTopAnswer(orchestrationResponse) {
 
 module.exports.EchoBot = EchoBot;
 module.exports.QnABot = QnABot;
+module.exports.OrchestrationBot = OrchestrationBot;

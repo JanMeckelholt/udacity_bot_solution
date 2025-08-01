@@ -16,7 +16,7 @@ const {
 } = require('botbuilder');
 
 // This bot's main dialog.
-const { EchoBot, QnABot } = require('./bot');
+const { EchoBot, QnABot, OrchestrationBot } = require('./bot');
 
 // Create HTTP server
 const server = restify.createServer();
@@ -72,12 +72,19 @@ const configuration = {
     QnAEndpointHostName: process.env.QnAEndpointHostName,
     QnAProjectName: process.env.QnAProjectName
 };
-const qnaBot = new QnABot(configuration, { deploymentName: 'production' });
+const qnaOptions = { deploymentName: 'production' };
+const qnaBot = new QnABot(configuration, qnaOptions);
+
+const orchestrationOptions = {
+    deploymentName: 'udacity-jmeckel-orchestration-deployment',
+    projectName: 'udacity-jmeckel-dentist-project'
+};
+const orchestrationBot = new OrchestrationBot(configuration, orchestrationOptions);
 
 // Listen for incoming requests.
 server.post('/api/messages', async (req, res) => {
     // Route received a request to adapter for processing
-    await adapter.process(req, res, (context) => qnaBot.run(context));
+    await adapter.process(req, res, (context) => orchestrationBot.run(context));
 });
 
 server.get('/*', restify.plugins.serveStatic({
