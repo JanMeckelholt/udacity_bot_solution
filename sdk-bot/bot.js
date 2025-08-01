@@ -30,11 +30,13 @@ class QnABot extends ActivityHandler {
     constructor(configuration, qnaOptions) {
         super();
         if (!configuration) throw new Error('[QnABot]: Missing parameter. configuration is required');
-        this.qnaClient = new ConversationAnalysisClient(
-            configuration.QnAEndpointHostName,
-            new AzureKeyCredential(configuration.QnAAuthKey)
-        );
-        this.projectName = configuration.QnAKnowledgebaseId;
+
+        const endpoint = configuration.QnAEndpointHostName;
+        const credential = new AzureKeyCredential(configuration.QnAAuthKey);
+
+        this.qnaClient = new ConversationAnalysisClient(endpoint, credential);
+
+        this.projectName = configuration.QnAProjectName;
         this.deploymentName = qnaOptions.deploymentName || 'production';
 
         this.onMessage(async (context, next) => {
@@ -54,7 +56,7 @@ class QnABot extends ActivityHandler {
                         deploymentName: this.deploymentName
                     }
                 });
-                const answers = result.result.answers;
+                const answers = result.result && result.result.answers ? result.result.answers : [];
                 if (answers && answers.length > 0 && answers[0].answer) {
                     await context.sendActivity(answers[0].answer);
                 } else {
@@ -62,6 +64,7 @@ class QnABot extends ActivityHandler {
                 }
             } catch (err) {
                 await context.sendActivity('Error querying QnA service.');
+                await context.sendActivity(`err: ${ err }`);
                 console.error(err);
             }
             await next();

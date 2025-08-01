@@ -68,9 +68,9 @@ adapter.onTurnError = onTurnErrorHandler;
 const myBot = new EchoBot();
 
 const configuration = {
-    QnAEndpointHostName: process.env.QnAEndpointHostName,
     QnAAuthKey: process.env.QnAAuthKey,
-    QnAKnowledgebaseId: process.env.QnAKnowledgebaseId
+    QnAEndpointHostName: process.env.QnAEndpointHostName,
+    QnAProjectName: process.env.QnaProjectName
 };
 const qnaBot = new QnABot(configuration, { deploymentName: 'production' });
 
