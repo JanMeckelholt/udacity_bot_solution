@@ -45,6 +45,7 @@ class QnABot extends ActivityHandler {
             try {
                 // const answer = await queryQnA(configuration, qnaOptions, question);
                 const res = await queryOrchestration(configuration, qnaOptions, question);
+                context.sendActivity(`res: ${ JSON.stringify(res, null, 2) }`);
                 const answer = extractTopAnswer(res);
                 await context.sendActivity(answer);
             } catch (err) {
