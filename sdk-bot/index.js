@@ -70,7 +70,7 @@ const myBot = new EchoBot();
 const configuration = {
     QnAAuthKey: process.env.QnAAuthKey,
     QnAEndpointHostName: process.env.QnAEndpointHostName,
-    QnAProjectName: process.env.QnaProjectName
+    QnAProjectName: process.env.QnAProjectName
 };
 const qnaBot = new QnABot(configuration, { deploymentName: 'production' });
 
